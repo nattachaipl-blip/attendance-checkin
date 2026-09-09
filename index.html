@@ -1,13 +1,245 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Check-in</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6f2383">
+<title>เช็กชื่อทำบุญสาขาวิชาฯ 2569</title>
+<style>
+:root{--purple:#6f2383;--purple2:#9b4aac;--bg:#f6f2f7;--card:#fff;--ink:#251f27;--muted:#736b75;--ok:#17723a;--warn:#956500;--bad:#a32929}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Sarabun","Noto Sans Thai","Segoe UI",sans-serif}
+body{min-height:100vh} .app{max-width:520px;margin:0 auto;padding:12px 12px calc(28px + env(safe-area-inset-bottom))}
+.hero{background:linear-gradient(145deg,#602070,#8e359f);color:#fff;border-radius:22px;padding:18px 16px;box-shadow:0 10px 30px #5320612b}
+.kicker{font-size:13px;opacity:.9} h1{font-size:23px;line-height:1.28;margin:5px 0 5px} .sub{font-size:13px;opacity:.9;line-height:1.45}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px} .stat{background:#ffffff18;border:1px solid #ffffff29;border-radius:14px;padding:9px;text-align:center}
+.stat b{display:block;font-size:25px} .stat span{font-size:11px;opacity:.95}
+.card{background:#fff;border-radius:18px;padding:14px;margin-top:12px;box-shadow:0 4px 16px #39233e0d} .title{font-size:17px;font-weight:800;margin-bottom:10px}
+#reader{background:#151515;border-radius:16px;overflow:hidden;min-height:225px} #reader video{object-fit:cover!important}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px} button{border:0;border-radius:13px;padding:13px 10px;font-size:16px;font-weight:800;cursor:pointer}
+.primary{background:var(--purple);color:white} .soft{background:#eee7f0;color:#582164} .green{background:#e7f7ec;color:#166535} .danger{background:#fff0f0;color:#a32929}
+.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}
+.result{display:none;border-radius:20px;padding:21px 12px;text-align:center;margin-top:12px;border:2px solid}
+.result.ok{display:block;background:#eaf9ef;border-color:#64bf79} .result.dup{display:block;background:#fff7df;border-color:#e1bb5a} .result.unknown{display:block;background:#fff0f0;border-color:#dd8585}
+.rtitle{font-size:22px;font-weight:900} .rname{font-size:29px;font-weight:900;line-height:1.2;margin:10px 0 4px} .rid{font-size:15px;color:#666}
+.rmsg{font-size:23px;font-weight:900;line-height:1.35;margin-top:15px} .rtime{font-size:14px;color:#666;margin-top:8px}
+input,select{width:100%;padding:12px;border:1px solid #d7ceda;border-radius:12px;font-size:16px;background:#fff} .manual{display:grid;gap:8px}
+.searchResults{max-height:240px;overflow:auto;margin-top:8px} .searchItem{padding:10px;border:1px solid #eee;border-radius:12px;margin-top:7px;cursor:pointer}
+.searchItem b{display:block} .searchItem small{color:#666} .report{width:100%;border-collapse:collapse;font-size:13px} .report th,.report td{padding:9px 6px;border-bottom:1px solid #eee;text-align:right}
+.report th:first-child,.report td:first-child{text-align:left} .report th{font-size:12px;color:#666} .recent{max-height:260px;overflow:auto}
+.recentRow{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 1px;border-bottom:1px solid #eee} .recentRow b{display:block;font-size:14px} .recentRow small{color:#666}
+.notice{font-size:12px;line-height:1.5;background:#fff8df;border:1px solid #ebd987;border-radius:12px;padding:10px} .statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;margin-right:5px}
+.footer{text-align:center;color:#817784;font-size:11px;margin-top:15px;line-height:1.5}
+</style>
 </head>
 <body>
-    <h1>ระบบเช็คชื่อ</h1>
-    <h2>ทำบุญสาขาวิชาฯ ประจำปี 2569</h2>
-    <p>ระบบพร้อมใช้งาน</p>
+<div class="app">
+<section class="hero">
+  <div class="kicker">มหาวิทยาลัยราชภัฏบ้านสมเด็จเจ้าพระยา</div>
+  <h1>ทำบุญสาขาวิชาการจัดการวิศวกรรมการผลิตและโลจิสติกส์</h1>
+  <div class="sub">ประจำปี 2569 • 10 กันยายน 2569<br>ระบบเช็กชื่อผู้เข้าร่วมด้วย Barcode</div>
+  <div class="stats">
+    <div class="stat"><b id="attCount">0</b><span>มาแล้ว</span></div>
+    <div class="stat"><b id="rosterCount">0</b><span>รายชื่อทั้งหมด</span></div>
+    <div class="stat"><b id="percent">0%</b><span>สัดส่วนเข้าร่วม</span></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="title"><span class="statusDot" id="scannerDot"></span>สแกน Barcode</div>
+  <div id="reader"></div>
+  <div class="btns">
+    <button class="primary" id="startBtn" onclick="startScanner()">📷 เปิดกล้อง</button>
+    <button class="soft" onclick="stopScanner()">⏹ หยุดกล้อง</button>
+  </div>
+  <div class="hint">แนะนำ iPhone SE 3: ใช้ Safari • ถือจอแนวตั้ง • ให้ Barcode ของนักศึกษาอยู่แนวนอนกลางกรอบ • หากอ่านไม่ติดให้ขยับระยะเข้า–ออกเล็กน้อย</div>
+
+  <div id="result" class="result">
+    <div id="rtitle" class="rtitle"></div>
+    <div id="rname" class="rname"></div>
+    <div id="rid" class="rid"></div>
+    <div id="rmsg" class="rmsg"></div>
+    <div id="rtime" class="rtime"></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="title">ค้นหา / นักศึกษาตกหล่น</div>
+  <div class="manual">
+    <input id="searchBox" placeholder="ค้นหาด้วยรหัส หรือชื่อ-นามสกุล" oninput="searchRoster()">
+    <div id="searchResults" class="searchResults"></div>
+    <details>
+      <summary style="font-weight:800;cursor:pointer;padding:6px 0">+ เพิ่มผู้ที่ไม่มีในฐานรายชื่อ</summary>
+      <div class="manual" style="margin-top:9px">
+        <input id="manualId" inputmode="numeric" placeholder="รหัสนักศึกษา / รหัสอ้างอิง">
+        <input id="manualName" placeholder="ชื่อ-นามสกุล">
+        <select id="manualClass">
+          <option value="">เลือกชั้นปี/กลุ่ม</option><option>ปี 1</option><option>ปี 2</option><option>ปี 3</option><option>ปี 4</option><option>อาจารย์</option><option>ศิษย์เก่า/อื่น ๆ</option>
+        </select>
+        <button class="green" onclick="manualCheckin()">✅ เพิ่มและเช็กชื่อ</button>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="card">
+  <div class="title">รายงานภาพรวม</div>
+  <table class="report">
+    <thead><tr><th>กลุ่ม</th><th>ทั้งหมด</th><th>มาแล้ว</th><th>ยังไม่มา</th><th>%</th></tr></thead>
+    <tbody id="reportBody"></tbody>
+  </table>
+  <div class="btns">
+    <button class="primary" onclick="exportCSV()">⬇️ Export CSV</button>
+    <button class="soft" onclick="renderRecent()">🧾 ล่าสุด</button>
+  </div>
+  <div id="recent" class="recent"></div>
+</section>
+
+<section class="card">
+  <div class="title">ความปลอดภัยของข้อมูล</div>
+  <div class="notice">รายชื่อถูกฝังไว้ใน Web App แล้ว จึงไม่ต้องโหลด Excel หน้างาน ข้อมูลการเช็กชื่อเก็บเฉพาะใน Safari ของ iPhone เครื่องนี้ด้วย localStorage — ปิด Safari แล้วเปิด URL เดิมสามารถทำต่อได้ แต่ควร Export CSV หลังจบงาน และอย่าล้างข้อมูลเว็บไซต์ก่อนสำรองไฟล์</div>
+  <button class="danger" style="width:100%;margin-top:9px" onclick="resetAttendance()">🗑 ล้างเฉพาะข้อมูลเช็กชื่อ</button>
+</section>
+
+<div class="footer">จัดอุตบ้านสมเด็จ • “ค่าของคนอยู่ที่ผลของงาน”<br><span id="sysStatus">กำลังตรวจสอบระบบ…</span></div>
+</div>
+
+<script>
+const ROSTER = [{"id":"6921299001","name":"นางสาวกมลชนก นรารัตน์","class":"ปี 1"},{"id":"6921299002","name":"นางสาวชลธิรศน์ นรสิทธิ์","class":"ปี 1"},{"id":"6921299003","name":"นางสาวเขมจิรา โพธิโต","class":"ปี 1"},{"id":"6921299004","name":"นายเอกมันต์ ภาคเรณู","class":"ปี 1"},{"id":"6921299005","name":"นางสาวเบญจมาศ สว่างจันทร์","class":"ปี 1"},{"id":"6921299006","name":"นายชีระวิทย์ มณีวราพันธุ์","class":"ปี 1"},{"id":"6921299007","name":"นางสาววรัทยา จอมพารา","class":"ปี 1"},{"id":"6921299008","name":"นางสาววันญาลักษณ์ เพียวสามพราน","class":"ปี 1"},{"id":"6921299009","name":"นายพงศกร สิทธิ์ขุนทด","class":"ปี 1"},{"id":"6921299101","name":"นางสาวกุลิสรา บูมี","class":"ปี 1"},{"id":"6921299102","name":"นางสาวจุฬารัตน์ เชื้องาม","class":"ปี 1"},{"id":"6921299103","name":"นางสาวศศิเกตุ เเจ่มจำรัส","class":"ปี 1"},{"id":"6921299104","name":"นายศิวัช มะลัยทอง","class":"ปี 1"},{"id":"6921299105","name":"นางสาววรนันท์ แจ้งมณี","class":"ปี 1"},{"id":"6821290301","name":"นางสาวนวินดา อยู่สบาย","class":"ปี 2"},{"id":"6821290302","name":"นางสาวธนัญญา กรรมารางกูร","class":"ปี 2"},{"id":"6821290303","name":"นางสาวพชรมน ฉิพิมาย","class":"ปี 2"},{"id":"6821290304","name":"นายปกรณ์ บุญนําเสถียร","class":"ปี 2"},{"id":"6821290305","name":"นายธนภัทร แดงระยับ","class":"ปี 2"},{"id":"6821290306","name":"นางสาวฉัตรพร กิ่งแก้ว","class":"ปี 2"},{"id":"6821290307","name":"นางสาวธัญพิชชา สุขประเสริฐ","class":"ปี 2"},{"id":"6821290308","name":"นางสาววทันยา จะเรตรัมย์","class":"ปี 2"},{"id":"6821290309","name":"นายพสิษฐ์ สืบสิงห์","class":"ปี 2"},{"id":"6821290310","name":"นางสาวชลธาร เทพทอง","class":"ปี 2"},{"id":"6821290311","name":"นางสาวชนิดา แสงไทย","class":"ปี 2"},{"id":"6821290312","name":"นายยศกร สุปลีนางกูล","class":"ปี 2"},{"id":"6821290405","name":"นายธนกร ตรงชูเกียรติ","class":"ปี 2"},{"id":"6821290001","name":"นายปวริศ การุณสิต","class":"ปี 2"},{"id":"6821290002","name":"นายฐิติวัชร์ ศรสุรินทร์","class":"ปี 2"},{"id":"6821290003","name":"นางสาวสุพพัตรา เขียนสายออ","class":"ปี 2"},{"id":"6821290004","name":"นายวรวิทย์ แก่นกุล","class":"ปี 2"},{"id":"6821290005","name":"นางสาววรรณิดา บุตรดี","class":"ปี 2"},{"id":"6821290006","name":"นายชญานนท์ พุ่มกระจ่าง","class":"ปี 2"},{"id":"6821290007","name":"นางสาวดวงฤทัย ศรีพุฒ","class":"ปี 2"},{"id":"6821290008","name":"นายธชธร บุญส่งกุศลศิล","class":"ปี 2"},{"id":"6821290009","name":"นายชนุตร์ อุดมปิยะจินดา","class":"ปี 2"},{"id":"6821290401","name":"นางสาวทรรศวรรณ บุญเสริม","class":"ปี 2"},{"id":"6821290404","name":"นางสาวอังคณา บุญลือ","class":"ปี 2"},{"id":"6721290301","name":"นางสาวกุลจิรา สึกขุนทด","class":"ปี 3"},{"id":"6721290303","name":"นางสาวจินต์จุฑา ธำรงสิริรักษ์","class":"ปี 3"},{"id":"6721290304","name":"นายกรชวัล สอนหนูน้อย","class":"ปี 3"},{"id":"6721290305","name":"นางสาวสุจิรา เผ่าสีหา","class":"ปี 3"},{"id":"6721290306","name":"นายภูดินันท์ พรหมแดน","class":"ปี 3"},{"id":"6721290307","name":"นายนาธาน อิสะและ","class":"ปี 3"},{"id":"6721290308","name":"นายรัตนชัย สายสุข","class":"ปี 3"},{"id":"6721290406","name":"นายระพีพัฒน์ ปลอดโปร่ง","class":"ปี 3"},{"id":"6721290001","name":"นายคณิศร ไกรพิพัฒน์","class":"ปี 3"},{"id":"6721290002","name":"นางสาวชิดชนก ใจธรรม","class":"ปี 3"},{"id":"6721290003","name":"นายรวีโรจน์ ลุนหล้า","class":"ปี 3"},{"id":"6721290004","name":"นางสาวจิณภัค ฤทธิเดช","class":"ปี 3"},{"id":"6721290005","name":"นายธีมากร ทองขำ","class":"ปี 3"},{"id":"6721290006","name":"นางสาวพราวขวัณ ธนทรัพย์สมบัติ","class":"ปี 3"},{"id":"6721290401","name":"นางสาวธนารีย์ สมยา","class":"ปี 3"},{"id":"6721290402","name":"นายพีรณัฐ ทัดเทียมหัด","class":"ปี 3"},{"id":"6721290403","name":"นายชิษณุชา มั่นประเทศ","class":"ปี 3"},{"id":"6721290404","name":"นางสาวชลิดา กันยา","class":"ปี 3"},{"id":"6621290301","name":"นางสาวมนฑกานต์ ศรีโยธา","class":"ปี 4"},{"id":"6621290302","name":"นางสาววาฮีดา ไทยสนิท","class":"ปี 4"},{"id":"6621290303","name":"นางสาวกัลยา แสงเผือก","class":"ปี 4"},{"id":"6621290306","name":"นางสาวสุธิดา วาฤทธิ์","class":"ปี 4"},{"id":"6621290307","name":"นายศรยุทธ สีมาลา","class":"ปี 4"},{"id":"6621290308","name":"นายสันติภาพ ผลากร","class":"ปี 4"},{"id":"6621290309","name":"นายภากร สมบุตร","class":"ปี 4"},{"id":"6621290310","name":"นายชยพล เขตประทุม","class":"ปี 4"},{"id":"6621290311","name":"นายไชยภัทร สีสืบ","class":"ปี 4"},{"id":"6621290312","name":"นายเสฏฐนันท์ ภัคธรนิพัทธ์","class":"ปี 4"},{"id":"6621290313","name":"นางสาวอรอนงค์ แหวนเงิน","class":"ปี 4"},{"id":"6621290001","name":"นายเกรียงไกร เนยหนู","class":"ปี 4"},{"id":"6621290002","name":"นายภาคิน ป้องเรือ","class":"ปี 4"},{"id":"6621290003","name":"นางสาวรัชดาพร บุญเทพ","class":"ปี 4"},{"id":"6621290004","name":"นายณัฐวัฒน์ ทรัพย์วิลัย","class":"ปี 4"},{"id":"6621290305","name":"นางสาวปราณี ก่อแก้ว","class":"ปี 4"},{"id":"6621290401","name":"นางสาวกันติยา คำโพนงาม","class":"ปี 4"},{"id":"6621290402","name":"นายณฤดล พรกฤษฎานันท์","class":"ปี 4"},{"id":"6621290403","name":"นางสาวชิณาทรัพย์ แสงใส","class":"ปี 4"},{"id":"6621290404","name":"นายพศพงศ์ ลือประเสริฐ","class":"ปี 4"},{"id":"6621290405","name":"นางสาวกัญญาภัค ตันชวลิต","class":"ปี 4"},{"id":"6621290406","name":"นางสาวพลังบุญ สมุทรหล้า","class":"ปี 4"},{"id":"1929900063830","name":"อาจารย์ ดร.ณัฐชัย เปลี่ยนวิจารณ์","class":"อาจารย์"}];
+const FUN_MESSAGES = ["✨ วันนี้ออร่าจับนะ","😎 ตัวตึงมาแล้ว","🔥 วันนี้ทรงดีมาก","😂 รอด! เช็กชื่อทัน","👀 วันนี้ดูมีอนาคตนะ","🫡 คนนี้อาจารย์จำได้","💯 ทรงนี้มี A แน่นอน…มั้ง","😂 มาเรียนจริงด้วย!","👏 วันนี้ทำดีมาก มาเรียน","🔥 ตัวท็อปเข้าสู่ระบบ","😎 เช็กชื่อยังดูเท่","🧠 ทรงนี้ดูมีความรู้","😂 ระบบยืนยัน คนนี้มา!","✨ วันนี้ดูแพงนะเรา","🤣 งานส่งยังไม่รู้ แต่มาแล้ว","💯 คนนี้ของจริง","👀 อาจารย์เห็นแล้วนะ","😂 เกือบไม่เชื่อว่ามา","🔥 วันนี้จึ้งเกิน","🫶 ระบบอนุมัติความน่ารัก","😎 ทรงนี้ HR จองตัว","💼 CEO ในอนาคตมาแล้ว","😂 มาแล้ว อย่าเพิ่งกลับ","🧠 IQ วันนี้ดูสูงนะ","✨ มีแววรุ่ง…อย่าหยุดเรียน","🤣 Barcode ยังจำเธอได้","💯 +1 แต้มความขยัน","🙏 วันนี้บุญถึงนะ","😂 พระให้พร อาจารย์เช็กชื่อ","🎉 ยินดีด้วย วันนี้ไม่ขาด!","🌟 วันนี้ดาวเด่นเข้าระบบแล้ว","😎 เช็กชื่อผ่าน ความเท่ผ่าน","🚀 อนาคตไกล เริ่มจากมางานวันนี้","🎯 เข้าเป้า! ระบบรับทราบแล้ว","😄 วันนี้มาถูกที่ ถูกเวลา","🔥 พลังงานวันนี้เกินร้อย","🫶 มาแล้วก็รับบุญกลับไปเยอะ ๆ","😎 Barcode บอกว่าคนนี้มีของ","✨ ระบบตรวจพบความปัง","🎉 Mission เช็กชื่อ Complete!","😂 มาแบบมีหลักฐาน ระบบเห็นแล้ว","👏 ปรบมือให้ความตรงเวลา","🧠 สมองพร้อม บุญพร้อม เช็กชื่อพร้อม","🔥 โปรไฟล์วันนี้ดูน่าจ้างมาก","😎 มาถึงแล้ว อย่าลืมยิ้มให้กล้อง","✨ เข้างานแบบคนมีอนาคต","😂 สแกนผ่านแบบไม่มีข้อกังขา","🎯 วันนี้ไม่หลุดเรดาร์อาจารย์","💯 คะแนนความขยัน +1","🚀 วันนี้เริ่มดี มีชัยไปกว่าครึ่ง","😄 ระบบบอกว่า วันนี้เธอเอาเรื่อง","🌟 ขึ้นแท่นผู้เข้าร่วมเรียบร้อย","🤣 ปาฏิหาริย์มีจริง…มาเช็กชื่อแล้ว","👏 มาแล้วนะ ระบบเป็นพยาน","🔥 ลุควันนี้พร้อมเข้าสถานประกอบการ","😎 ตัวจริงต้องมี Timestamp","✨ หน้านี้ควรค่าแก่การแคป","🎉 ยินดีต้อนรับเข้าสู่โหมดรับบุญ","🫡 รับทราบการปรากฏตัวครับผม","😂 ระบบจำได้ ไม่ต้องแนะนำตัว","💼 HR เห็นแล้วอาจมีสะดุ้ง","🌟 วันนี้ Presence เต็มร้อย","🔥 ไม่ต้องพูดเยอะ Barcode พูดแทนแล้ว","😄 เช็กชื่อสำเร็จ ยิ้มได้เลย","✨ บุญก็ได้ ชื่อก็เช็กแล้ว","😎 เข้าแบบคูล ๆ ระบบรู้เรื่อง","🎯 รายงานตัวอย่างเป็นทางการแล้ว","👏 วันนี้มาดี มีแต้ม","😂 ไม่ขาดครับ หลักฐานชัดเจน","🧠 สมองเปิด ระบบเปิด บุญเปิด","🚀 พร้อมพุ่งสู่วันดี ๆ","🔥 สาขาฯ รับทราบการมาถึงแล้ว","🫶 วันนี้คนดีมี Barcode","😎 ระบบบอกว่า คนนี้ผ่านฉลุย","✨ สแกนทีเดียว จำได้ทั้งงาน","🎉 เช็กชื่อเรียบร้อย ไปสนุกต่อได้","🤣 อยากหายตัวก็ไม่ทันแล้ว ระบบเห็นแล้ว","💯 สถิติวันนี้มีชื่อเธอแล้ว","🌟 วันนี้มาเพิ่มความปังให้สาขาฯ","👏 Respect คนมาร่วมกิจกรรม","😄 มาแล้วก็ขอให้วันนี้เป็นวันดี","🚀 เช็กชื่อผ่าน เตรียมรับพลังบวก","😎 นี่แหละคนจริง เช็กแล้วอยู่จริง","✨ ระบบนี้รู้ว่าใครตัวตึง","🔥 ความขยันตรวจพบได้จาก Barcode","😂 ชื่อขึ้นแล้ว แคปได้เลย","🎯 วันนี้เธออยู่ถูกฝั่งของสถิติ","🫶 ขอบคุณที่มาร่วมสร้างบรรยากาศดี ๆ","💼 ลุควันนี้พร้อมประชุมบอร์ด","🌟 ระบบขอมอบดาวให้หนึ่งดวง","👏 เข้าร่วมแล้วอย่างสง่างาม","😄 สแกนผ่านแบบมืออาชีพ","🔥 มาแล้ว งานนี้มีสีสันขึ้นอีกคน","✨ วันนี้ชื่อขึ้นจออย่างหล่อ/สวยแบบกลาง ๆ","🎉 สถานะ: มาแล้วและมีหลักฐาน","😎 เช็กชื่อสำเร็จ แบบคนไม่ต้องลุ้น","🧠 มาเก็บทั้งบุญทั้งประสบการณ์","🚀 วันนี้เริ่มต้นด้วยคำว่า 'มา'","💯 ระบบให้ผ่านแบบไม่ต้องสัมภาษณ์","😂 Barcode นี้มีเจ้าของตัวจริงมาแล้ว","🌟 คนนี้มา งานนี้ครบเครื่อง","👏 จังหวะนี้ต้องมีภาพเป็นที่ระลึก"];
+const K_ATT="bsru_bun69_attendance_v3", K_MSG="bsru_bun69_usedmsg_v3", K_EXTRA="bsru_bun69_extra_v3";
+let attendance=readStore(K_ATT,{}), used=readStore(K_MSG,[]), extras=readStore(K_EXTRA,{});
+let scanner=null, scanLock=false, lastCode="", lastCodeAt=0;
+
+function readStore(k,fallback){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(fallback))}catch(e){return fallback}}
+function writeStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function norm(v){return String(v??"").replace(/\u00a0/g,"").replace(/\s+/g,"").replace(/\.0$/,"").trim()}
+function clean(s){return String(s??"").trim()}
+function allRoster(){return [...ROSTER,...Object.values(extras)]}
+function byId(id){id=norm(id);return allRoster().find(s=>norm(s.id)===id)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function nowText(iso){return new Intl.DateTimeFormat("th-TH",{dateStyle:"medium",timeStyle:"medium",timeZone:"Asia/Bangkok"}).format(new Date(iso))}
+function timeOnly(iso){return new Intl.DateTimeFormat("th-TH",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Asia/Bangkok"}).format(new Date(iso))}
+function nextMessage(){
+  if(used.length>=FUN_MESSAGES.length) used=[];
+  const avail=FUN_MESSAGES.map((_,i)=>i).filter(i=>!used.includes(i));
+  const i=avail[Math.floor(Math.random()*avail.length)];
+  used.push(i); writeStore(K_MSG,used); return FUN_MESSAGES[i];
+}
+function feedback(ok=true){
+  try{if(navigator.vibrate) navigator.vibrate(ok?60:[80,50,80])}catch(e){}
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext, c=new AC(), o=c.createOscillator(), g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.frequency.value=ok?880:300;g.gain.value=.10;o.start();setTimeout(()=>{o.stop();c.close()},ok?110:220);
+  }catch(e){}
+}
+function show(type,title,name,id,msg,time){
+  const box=document.getElementById("result");box.className="result "+type;
+  rtitle.textContent=title;rname.textContent=name||"";rid.textContent=id?("รหัส "+id):"";rmsg.textContent=msg||"";rtime.textContent=time||"";
+  box.scrollIntoView({behavior:"smooth",block:"center"});
+}
+function checkin(rawId,source="SCAN",manual=null){
+  const id=norm(rawId); if(!id)return;
+  if(attendance[id]){feedback(false);const a=attendance[id];show("dup","⚠️ เช็กชื่อแล้ว",a.name,id,"ระบบไม่นับซ้ำ","ครั้งแรก "+nowText(a.time));return}
+  let st=byId(id);
+  if(!st && manual){
+    st={id,name:clean(manual.name)||"ผู้เข้าร่วม",class:clean(manual.class)||"ศิษย์เก่า/อื่น ๆ"};
+    extras[id]=st;writeStore(K_EXTRA,extras);
+  }
+  if(!st){
+    feedback(false);manualId.value=id;
+    show("unknown","❗ ไม่พบในฐาน","",id,"กรอกชื่อด้านล่าง หรือค้นหารายชื่อแล้วเช็กด้วยมือ","");
+    return;
+  }
+  const t=new Date().toISOString(), msg=nextMessage();
+  attendance[id]={id,name:st.name,class:st.class,time:t,source,message:msg};
+  if(!writeStore(K_ATT,attendance)) alert("บันทึกในเครื่องไม่สำเร็จ กรุณา Export CSV และตรวจพื้นที่จัดเก็บของ Safari");
+  feedback(true);show("ok","✅ เช็กชื่อสำเร็จ",st.name,id,msg,nowText(t));refresh();
+}
+function manualCheckin(){
+  const id=norm(manualId.value),name=clean(manualName.value),cls=manualClass.value;
+  if(!id)return alert("กรุณากรอกรหัสนักศึกษา/รหัสอ้างอิง");
+  if(!byId(id)&&!name)return alert("ไม่พบในฐาน กรุณากรอกชื่อ-นามสกุล");
+  checkin(id,"MANUAL",{name,class:cls});
+  manualId.value="";manualName.value="";manualClass.value="";
+}
+function searchRoster(){
+  const q=clean(searchBox.value).toLowerCase(); const out=document.getElementById("searchResults");
+  if(!q){out.innerHTML="";return}
+  const compact=norm(q);
+  const found=allRoster().filter(s=>norm(s.id).includes(compact)||s.name.toLowerCase().includes(q)).slice(0,12);
+  out.innerHTML=found.length?found.map(s=>`<div class="searchItem" onclick="checkin('${esc(s.id)}','SEARCH')"><b>${esc(s.name)}</b><small>${esc(s.id)} • ${esc(s.class)}${attendance[norm(s.id)]?" • ✅ เช็กแล้ว":""}</small></div>`).join(""):`<div class="hint">ไม่พบรายชื่อ — ใช้ “เพิ่มผู้ที่ไม่มีในฐานรายชื่อ” ด้านล่างได้</div>`;
+}
+async function loadScannerLib(){
+  if(window.Html5Qrcode)return true;
+  const urls=["https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js","https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"];
+  for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement("script");s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});if(window.Html5Qrcode)return true}catch(e){}}
+  return false;
+}
+async function startScanner(){
+  if(scanner)return;
+  if(!window.isSecureContext){alert("กล้องต้องเปิดผ่าน HTTPS เท่านั้น");return}
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){alert("Browser นี้ไม่อนุญาตการใช้กล้อง กรุณาเปิดด้วย Safari รุ่นปัจจุบัน");return}
+  startBtn.disabled=true;startBtn.textContent="กำลังเปิดกล้อง…";
+  const ok=await loadScannerLib();
+  if(!ok){alert("โหลดโมดูลสแกน Barcode ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้ว Refresh หน้าเว็บ");startBtn.disabled=false;startBtn.textContent="📷 เปิดกล้อง";return}
+  try{
+    scanner=new Html5Qrcode("reader");
+    const formats=[Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.CODE_93,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF];
+    await scanner.start({facingMode:{ideal:"environment"}},{fps:12,qrbox:{width:300,height:115},aspectRatio:1.55,formatsToSupport:formats},decoded=>{
+      const t=Date.now(),code=norm(decoded);
+      if(scanLock||(code===lastCode&&t-lastCodeAt<2500))return;
+      scanLock=true;lastCode=code;lastCodeAt=t;checkin(code,"SCAN");setTimeout(()=>scanLock=false,1500);
+    },()=>{});
+    scannerDot.style.background="#26b359";sysStatus.textContent="ระบบพร้อม • กล้องทำงาน";
+  }catch(e){
+    scanner=null;scannerDot.style.background="#d04a4a";
+    alert("เปิดกล้องไม่สำเร็จ\n\n1) Safari > Allow Camera\n2) ปิดแอปอื่นที่ใช้กล้อง\n3) Reload หน้าเว็บแล้วลองใหม่\n\nรายละเอียด: "+e);
+  }finally{startBtn.disabled=false;startBtn.textContent="📷 เปิดกล้อง"}
+}
+async function stopScanner(){
+  if(!scanner)return;
+  try{await scanner.stop();await scanner.clear()}catch(e){}
+  scanner=null;scannerDot.style.background="#999";sysStatus.textContent="ระบบพร้อม • กล้องหยุดอยู่";
+}
+function report(){
+  const roster=allRoster(), classes=[...new Set(roster.map(s=>s.class))];
+  const order=["ปี 1","ปี 2","ปี 3","ปี 4","อาจารย์","ศิษย์เก่า/อื่น ๆ"];classes.sort((a,b)=>(order.indexOf(a)<0?99:order.indexOf(a))-(order.indexOf(b)<0?99:order.indexOf(b))||a.localeCompare(b,"th"));
+  reportBody.innerHTML=classes.map(c=>{
+    const total=roster.filter(s=>s.class===c).length, came=Object.values(attendance).filter(a=>a.class===c).length, miss=Math.max(0,total-came), pct=total?Math.round(came*100/total):0;
+    return `<tr><td>${esc(c)}</td><td>${total}</td><td><b>${came}</b></td><td>${miss}</td><td>${pct}%</td></tr>`;
+  }).join("");
+}
+function renderRecent(){
+  const arr=Object.values(attendance).sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,20);
+  recent.innerHTML=arr.map(a=>`<div class="recentRow"><div><b>${esc(a.name)}</b><small>${esc(a.id)} • ${esc(a.class)}</small></div><small>${timeOnly(a.time)}</small></div>`).join("");
+}
+function refresh(){
+  const total=ROSTER.length, came=Object.keys(attendance).length;
+  attCount.textContent=came;rosterCount.textContent=total;percent.textContent=(total?Math.round(came*100/total):0)+"%";report();renderRecent();
+}
+function csvQ(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
+function exportCSV(){
+  const rows=[["รหัส","ชื่อ-นามสกุล","ชั้นปี/กลุ่ม","วันเวลาเช็กชื่อ","ช่องทาง","ข้อความสุ่ม"]];
+  Object.values(attendance).sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(a=>rows.push([a.id,a.name,a.class,nowText(a.time),a.source,a.message]));
+  const csv="\uFEFF"+rows.map(r=>r.map(csvQ).join(",")).join("\r\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="attendance_bun69_"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+function resetAttendance(){
+  if(!confirm("ต้องการล้างข้อมูลเช็กชื่อทั้งหมดของกิจกรรมนี้จริงหรือไม่?\nกรุณา Export CSV ก่อนล้าง"))return;
+  if(!confirm("ยืนยันอีกครั้ง: ข้อมูลเวลาเช็กชื่อจะถูกลบจากเครื่องนี้"))return;
+  attendance={};used=[];localStorage.removeItem(K_ATT);localStorage.removeItem(K_MSG);refresh();result.className="result";
+}
+function systemCheck(){
+  const issues=[];
+  if(!window.isSecureContext)issues.push("ไม่ใช่ HTTPS");
+  if(!("localStorage" in window))issues.push("ไม่มี localStorage");
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))issues.push("กล้องเว็บไม่พร้อม");
+  try{const k="__t";localStorage.setItem(k,"1");localStorage.removeItem(k)}catch(e){issues.push("Safari ไม่อนุญาตพื้นที่จัดเก็บ")}
+  sysStatus.textContent=issues.length?("⚠️ "+issues.join(" • ")):"✅ ระบบพื้นฐานพร้อมใช้งาน";
+}
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&scanner){/* iOS may suspend camera; stored data remains safe */}});
+window.addEventListener("pageshow",()=>{refresh();systemCheck()});
+refresh();systemCheck();
+</script>
 </body>
 </html>
