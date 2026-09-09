@@ -51,7 +51,7 @@ input,select{width:100%;padding:12px;border:1px solid #d7ceda;border-radius:12px
     <button class="primary" id="startBtn" onclick="startScanner()">📷 เปิดกล้อง</button>
     <button class="soft" onclick="stopScanner()">⏹ หยุดกล้อง</button>
   </div>
-  <div class="hint">แนะนำ iPhone SE 3: ใช้ Safari • ถือจอแนวตั้ง • ให้ Barcode ของนักศึกษาอยู่แนวนอนกลางกรอบ • หากอ่านไม่ติดให้ขยับระยะเข้า–ออกเล็กน้อย</div>
+  <div class="hint">แนะนำ iPhone SE 3: ใช้ Safari • ถือจอแนวตั้ง • ให้ Barcode ของนักศึกษาอยู่แนวนอนกลางกรอบ • หากอ่านไม่ติดให้ขยับระยะเข้า–ออกเล็กน้อย</div><div id="cameraStatus" class="hint" style="font-weight:700">สถานะกล้อง: ยังไม่ได้เปิด</div>
 
   <div id="result" class="result">
     <div id="rtitle" class="rtitle"></div>
@@ -176,31 +176,144 @@ async function loadScannerLib(){
   return false;
 }
 async function startScanner(){
-  if(scanner)return;
-  if(!window.isSecureContext){alert("กล้องต้องเปิดผ่าน HTTPS เท่านั้น");return}
-  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){alert("Browser นี้ไม่อนุญาตการใช้กล้อง กรุณาเปิดด้วย Safari รุ่นปัจจุบัน");return}
-  startBtn.disabled=true;startBtn.textContent="กำลังเปิดกล้อง…";
+  if(scanner) return;
+
+  if(!window.isSecureContext){
+    cameraStatus.textContent="สถานะกล้อง: ❌ ต้องเปิดผ่าน HTTPS";
+    alert("กล้องต้องเปิดผ่าน HTTPS เท่านั้น");
+    return;
+  }
+
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+    cameraStatus.textContent="สถานะกล้อง: ❌ Safari ไม่รองรับการใช้กล้อง";
+    alert("Safari รุ่นนี้ไม่รองรับการใช้กล้องผ่านเว็บ");
+    return;
+  }
+
+  startBtn.disabled=true;
+  startBtn.textContent="กำลังเปิดกล้อง…";
+  cameraStatus.textContent="สถานะกล้อง: กำลังโหลดตัวอ่าน Barcode…";
+
   const ok=await loadScannerLib();
-  if(!ok){alert("โหลดโมดูลสแกน Barcode ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้ว Refresh หน้าเว็บ");startBtn.disabled=false;startBtn.textContent="📷 เปิดกล้อง";return}
+  if(!ok){
+    cameraStatus.textContent="สถานะกล้อง: ❌ โหลดตัวอ่าน Barcode ไม่สำเร็จ";
+    alert("โหลดโมดูลสแกน Barcode ไม่สำเร็จ\nกรุณาตรวจอินเทอร์เน็ตแล้ว Reload หน้าเว็บ");
+    startBtn.disabled=false;
+    startBtn.textContent="📷 เปิดกล้อง";
+    return;
+  }
+
+  const formats=[
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.CODE_93,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.ITF
+  ];
+
+  const onSuccess=(decoded)=>{
+    const t=Date.now(), code=norm(decoded);
+    if(scanLock || (code===lastCode && t-lastCodeAt<2500)) return;
+    scanLock=true;
+    lastCode=code;
+    lastCodeAt=t;
+    checkin(code,"SCAN");
+    setTimeout(()=>scanLock=false,1500);
+  };
+
+  const config={
+    fps:10,
+    qrbox:{width:280,height:100}
+  };
+
   try{
-    scanner=new Html5Qrcode("reader");
-    const formats=[Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.CODE_93,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.ITF];
-    await scanner.start({facingMode:{ideal:"environment"}},{fps:12,qrbox:{width:300,height:115},aspectRatio:1.55,formatsToSupport:formats},decoded=>{
-      const t=Date.now(),code=norm(decoded);
-      if(scanLock||(code===lastCode&&t-lastCodeAt<2500))return;
-      scanLock=true;lastCode=code;lastCodeAt=t;checkin(code,"SCAN");setTimeout(()=>scanLock=false,1500);
-    },()=>{});
-    scannerDot.style.background="#26b359";sysStatus.textContent="ระบบพร้อม • กล้องทำงาน";
+    // สำคัญ: formatsToSupport ต้องอยู่ใน constructor
+    scanner=new Html5Qrcode("reader",{
+      formatsToSupport:formats,
+      useBarCodeDetectorIfSupported:false,
+      verbose:false
+    });
+
+    cameraStatus.textContent="สถานะกล้อง: กำลังขอสิทธิ์กล้องจาก Safari…";
+
+    // iPhone/Safari: facingMode ต้องเป็น string หรือ {exact:...}
+    try{
+      await scanner.start(
+        {facingMode:"environment"},
+        config,
+        onSuccess,
+        ()=>{}
+      );
+    }catch(firstError){
+      // fallback: ให้ library หา camera id แล้วเลือกกล้องหลัง
+      try{ await scanner.clear(); }catch(e){}
+      scanner=null;
+
+      cameraStatus.textContent="สถานะกล้อง: กำลังค้นหากล้องหลัง…";
+      const cameras=await Html5Qrcode.getCameras();
+      if(!cameras || !cameras.length) throw firstError;
+
+      let chosen=cameras.find(c=>/back|rear|environment|หลัง/i.test(c.label));
+      if(!chosen) chosen=cameras[cameras.length-1];
+
+      scanner=new Html5Qrcode("reader",{
+        formatsToSupport:formats,
+        useBarCodeDetectorIfSupported:false,
+        verbose:false
+      });
+
+      await scanner.start(
+        chosen.id,
+        config,
+        onSuccess,
+        ()=>{}
+      );
+    }
+
+    scannerDot.style.background="#26b359";
+    cameraStatus.textContent="สถานะกล้อง: ✅ กล้องเปิดแล้ว พร้อมสแกน";
+    sysStatus.textContent="✅ ระบบพร้อม • กล้องทำงาน";
+
   }catch(e){
-    scanner=null;scannerDot.style.background="#d04a4a";
-    alert("เปิดกล้องไม่สำเร็จ\n\n1) Safari > Allow Camera\n2) ปิดแอปอื่นที่ใช้กล้อง\n3) Reload หน้าเว็บแล้วลองใหม่\n\nรายละเอียด: "+e);
-  }finally{startBtn.disabled=false;startBtn.textContent="📷 เปิดกล้อง"}
+    try{ if(scanner) await scanner.clear(); }catch(x){}
+    scanner=null;
+    scannerDot.style.background="#d04a4a";
+
+    const msg=String(e && e.message ? e.message : e);
+    cameraStatus.textContent="สถานะกล้อง: ❌ "+msg;
+
+    let advice="";
+    if(/NotAllowed|Permission|denied/i.test(msg)){
+      advice="\n\nบน iPhone ให้ไปที่ Settings > Safari > Camera > Allow";
+    }else if(/NotReadable|Could not start|Abort/i.test(msg)){
+      advice="\n\nกรุณาปิด Camera / LINE / แอปอื่นที่กำลังใช้กล้อง แล้วลองใหม่";
+    }
+
+    alert("เปิดกล้องไม่สำเร็จ\n\nรายละเอียด: "+msg+advice);
+  }finally{
+    startBtn.disabled=false;
+    startBtn.textContent="📷 เปิดกล้อง";
+  }
 }
+
 async function stopScanner(){
-  if(!scanner)return;
-  try{await scanner.stop();await scanner.clear()}catch(e){}
-  scanner=null;scannerDot.style.background="#999";sysStatus.textContent="ระบบพร้อม • กล้องหยุดอยู่";
+  if(!scanner){
+    cameraStatus.textContent="สถานะกล้อง: กล้องหยุดอยู่";
+    return;
+  }
+  try{
+    if(scanner.isScanning) await scanner.stop();
+  }catch(e){}
+  try{
+    await scanner.clear();
+  }catch(e){}
+  scanner=null;
+  scannerDot.style.background="#999";
+  cameraStatus.textContent="สถานะกล้อง: กล้องหยุดอยู่";
+  sysStatus.textContent="✅ ระบบพร้อม • กล้องหยุดอยู่";
 }
+
 function report(){
   const roster=allRoster(), classes=[...new Set(roster.map(s=>s.class))];
   const order=["ปี 1","ปี 2","ปี 3","ปี 4","อาจารย์","ศิษย์เก่า/อื่น ๆ"];classes.sort((a,b)=>(order.indexOf(a)<0?99:order.indexOf(a))-(order.indexOf(b)<0?99:order.indexOf(b))||a.localeCompare(b,"th"));
